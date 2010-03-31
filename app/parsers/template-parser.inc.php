@@ -31,7 +31,6 @@ Class TemplateParser {
     
     return $template_parts;
 	}
-	
 	static function expand_match($closing_count, $template_parts, $opening, $closing) {
       # rerun match to include the correct number of closing references,
       # using a backreference repeated once for each additionally-required closing reference
@@ -70,7 +69,7 @@ Class TemplateParser {
 		  $template = self::parse_vars($data, $template);
 		}
 		
-		if(preg_match('/<\?php[\s]+?(.*?)[\S\s]+?\?>/', $template)) {
+		if(preg_match('/<\?php[\s]+?([\S\s]*?)[\S\s]+?\?>/', $template)) {
 		  $template = self::parse_php($data, $template);
 		}
 		
@@ -200,7 +199,7 @@ Class TemplateParser {
 	
 	static function parse_php(&$data, $template) {
 	  # match any php calls
-	  $matches = preg_match('/([\S\s]*?)<\?php[\s]+?([\S\s]+?)\?>([\S\s]*)$/', $template, $template_parts);
+	  preg_match('/([\S\s]*?)<\?php[\s]+?([\S\s]+?)\?>([\S\s]*)$/', $template, $template_parts);
 	    
 	  # run replacements on the pre-"php" part of the partial
 	  $template = self::parse($data, $template_parts[1]);
