@@ -70,6 +70,10 @@ Class TemplateParser {
 		  $template = self::parse_vars($data, $template);
 		}
 		
+		if(preg_match('/<\?php[\s]+?(.*?)[\S\s]+?\?>/', $template)) {
+		  $template = self::parse_php($data, $template);
+		}
+		
 		return $template;
 	}
 	
@@ -192,6 +196,29 @@ Class TemplateParser {
 		$template = str_replace('@', '&#64;', $template);
 		
 		return $template;
+	}
+	
+	static function parse_php(&$data, $template) {
+	  # match any php calls
+	  $matches = preg_match('/([\S\s]*?)<\?php[\s]+?([\S\s]+?)\?>([\S\s]*)$/', $template, $template_parts);
+	    
+	  # run replacements on the pre-"php" part of the partial
+	  $template = self::parse($data, $template_parts[1]);
+	  
+	  # eval the PHP
+	  try {
+	  	ob_start();
+		  eval($template_parts[2]);
+		$inner_template = ob_get_clean();
+	  	$template .= self::parse($data, $inner_template);
+	  } catch (Exception $e) {
+	  	$template .= self::parse($data, $e->getMessage());
+	  }
+	  
+	  # run the replacementes on the post-"php" part of the partial
+	  $template .= self::parse($data, $template_parts[3]);
+	  
+	  return $template;
 	}
 		
 }
