@@ -166,7 +166,7 @@ Class PageData {
 	}
 	
 	static function create_asset_collections($page) {
-	  # $images
+		# $images
 		$page->images = Helpers::list_files($page->file_path, '/(?<!thumb|_lge|_sml)\.(gif|jpg|png|jpeg)$/i', false);
 		# $video
 		$page->video = Helpers::list_files($page->file_path, '/\.(mov|mp4|m4v)$/i', false);
@@ -190,9 +190,9 @@ Class PageData {
 		$shared = (file_exists('./content/_shared.txt')) ? file_get_contents('./content/_shared.txt') : '';
 
 		# remove UTF-8 BOM and marker character in input, if present
-    $merged_text = preg_replace('/^\xEF\xBB\xBF|\x1A/', '', array($shared, $text));
+		$merged_text = preg_replace('/^\xEF\xBB\xBF|\x1A/', '', array($shared, $text));
 
-    # merge shared content into text
+		# merge shared content into text
 		$text = "\n".$merged_text[0]."\n-\n".$merged_text[1]."\n-\n";
 		
 		# standardize line endings
@@ -211,8 +211,8 @@ Class PageData {
 			
 			# set a variable with a name of 'key' on the page with a value of 'value'
 			$page->$colon_split[0] = 
-			  # if the 'value' contains a newline character, parse it as markdown
-			  (strpos($colon_split[1], "\n") === false) ? trim($colon_split[1]) : Markdown(trim($colon_split[1]));
+				# if the 'value' contains a newline character, parse it as markdown
+				(strpos($colon_split[1], "\n") === false) ? trim($colon_split[1]) : Markdown(trim($colon_split[1]));
 		}
 	}
 	
