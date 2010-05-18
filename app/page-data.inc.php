@@ -210,9 +210,15 @@ Class PageData {
 			$colon_split[1] = preg_replace('/\@path/', $relative_path.'/', $colon_split[1]);
 			
 			# set a variable with a name of 'key' on the page with a value of 'value'
-			$page->$colon_split[0] = 
+			# $page->$colon_split[0] = 
 				# if the 'value' contains a newline character, parse it as markdown
-				(strpos($colon_split[1], "\n") === false) ? trim($colon_split[1]) : Markdown(trim($colon_split[1]));
+				if (strpos($colon_split[0], '-') === 0) {
+					$page->$colon_split[0] = explode("\n", trim($colon_split[1]));
+				} else if (strpos($colon_split[1], "\n") === false) {
+					$page->$colon_split[0] = trim($colon_split[1]);
+				} else {
+					$page->$colon_split[0] = Markdown(trim($colon_split[1]));
+				}
 		}
 	}
 	
