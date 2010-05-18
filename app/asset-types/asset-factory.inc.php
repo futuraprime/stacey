@@ -30,7 +30,7 @@ Class AssetFactory {
 		  # create a new asset and return its data
 		  $asset = new $asset($file_path);
 			return $asset->data;
-
+			
 		} else {
 			# new page
 			$page = new Page(Helpers::file_path_to_url($file_path));

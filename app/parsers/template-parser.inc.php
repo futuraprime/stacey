@@ -65,7 +65,7 @@ Class TemplateParser {
 		  $template = self::parse_includes($data, $template);
 		}
 		
-		if(preg_match('/\@\-[\w\d_\-]+?/', $template)) {
+		if(preg_match('/\$\-[\w\d_\-]+?/', $template)) {
 			$template = self::parse_lists($data, $template);
 		}
 		
@@ -128,10 +128,14 @@ Class TemplateParser {
 		$template_parts = self::test_nested_matches($template_parts, 'foreach[\s]+?[\$\@].+?\s+?do\s+?', 'endforeach');
 		
 		if($pages) {
-		  
+			
+			# check if it's a template list
+			$spec_list = (strpos($template_parts[2], '-') === 1) ? true : false;
+			
 			foreach($pages as $data_item) {
 				# transform data_item into its appropriate Object
-				$data_object =& AssetFactory::get($data_item);
+				# note - $data_object used to be assigned via =&. Standard assignment does not appear to break anything.
+				$data_object = ($spec_list) ? array('@value' => $data_item) : AssetFactory::get($data_item);
 				# recursively parse the inside part of the foreach loop
 				$template .= self::parse($data_object, $template_parts[3]);
 			}
@@ -190,12 +194,11 @@ Class TemplateParser {
 	
 	static function parse_lists($data, $template) {
 		# split out the template
-		preg_match('/([\S\s]*?)@\-([\w\d_\-]+)\(([\w ,\.\-\+]+)\)([\S\s]*)$/', $template, $template_parts);
+		preg_match('/([\S\s]*?)\$\-([\w\d_\-]+)\(([\w ,\.\-\+]+)\)([\S\s]*)$/', $template, $template_parts);
 		
 		$template = self::parse($data, $template_parts[1]);
 		
 		# add the list
-		#$template .= var_dump($data);
 		$items = (isset($data['$-'.$template_parts[2]]) && is_array($data['$-'.$template_parts[2]]) && !empty($data['$-'.$template_parts[2]])) ? $data['$-'.$template_parts[2]] : false;
 		
 		# make a space the default separator
