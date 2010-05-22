@@ -201,14 +201,7 @@ Class TemplateParser {
 		# add the list
 		$items = (isset($data['$-'.$template_parts[2]]) && is_array($data['$-'.$template_parts[2]]) && !empty($data['$-'.$template_parts[2]])) ? $data['$-'.$template_parts[2]] : false;
 		
-		# make a space the default separator
-		$spacer = (isset($template_parts[3]) && !is_null($template_parts[3])) ? $template_parts[3] : ' ';
-		if($items) {
-			for ($i = 0; $i < count($items); ++$i) {
-				$template .= $items[$i];
-				if($i < count($items) - 1) $template .= $template_parts[3];
-			}
-		}
+		$template .= ($items) ? join($items, $template_parts[3]) : '';
 		
 		# finish it out
 		$template .= self::parse($data, $template_parts[4]);
