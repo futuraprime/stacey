@@ -93,7 +93,7 @@ Class Stacey {
 		# return a 404 if a matching folder doesn't exist
 		if(!file_exists($file_path)) throw new Exception('404');
 		
-		if(preg_match('/\.\w+$/', $file_path)) { 					# throw new Exception('file');
+		if(!is_dir($file_path) && preg_match('/\.\w+$/', $file_path)) { 					# throw new Exception('file');
 			header('Content-Type: ' . Helpers::get_mime($file_path));
 			header('Content-Length: ' . filesize($file_path));
 			ob_clean();
