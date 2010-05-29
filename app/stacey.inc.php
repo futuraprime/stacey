@@ -46,7 +46,7 @@ Class Stacey {
 		    # set rdf+xml/utf-8 charset header
     	  header("Content-type: application/rdf+xml; charset=utf-8");
 		    break;
-      case 'xml':
+		case 'xml':
 		    # set xml/utf-8 charset header
     	  header("Content-type: text/xml; charset=utf-8");
 		    break;
@@ -90,10 +90,12 @@ Class Stacey {
 	}
 	
 	function create_page($file_path, $route) {
-	  # return a 404 if a matching folder doesn't exist
+		# return a 404 if a matching folder doesn't exist
 		if(!file_exists($file_path)) throw new Exception('404');
+		
+		if(preg_match('/\.\w+$/', $file_path)) throw new Exception('file');
 
-    # register global for the path to the page which is currently being viewed
+		# register global for the path to the page which is currently being viewed
 		global $current_page_file_path;
 		$current_page_file_path = $file_path;
 

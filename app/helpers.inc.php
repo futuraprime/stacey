@@ -32,11 +32,21 @@ Class Helpers {
 		$file_path = './content';
 		# Split the url and recursively unclean the parts into folder names
 		$url_parts = explode('/', $url);
+		# var_dump($url_parts);
 		foreach($url_parts as $u) {
 				# Look for a folder at the current path that doesn't start with an underscore
 				if(!preg_match('/^_/', $u)) $matches = array_keys(Helpers::list_files($file_path, '/^(\d+?\.)?'.$u.'$/', true));
 				# No matches means a bad url
-				if(empty($matches)) return false; 
+				if(empty($matches)) {
+					preg_match('/([\w\-]+)_([\w]+)/', $u, $seg_u);
+					$file_path .= '/'.$seg_u[1].".".$seg_u[2];
+					#var_dump($file_path);
+					if(!file_exists($file_path)) return false;
+					else {
+						# var_dump($file_path);
+						return $file_path;
+					}
+				}
 				else $file_path .=  '/'.$matches[0];
 		}
 		return $file_path;
@@ -75,7 +85,7 @@ Class Helpers {
 	  global $current_page_file_path;
 		$link_path = '';
 		if(!preg_match('/index/', $current_page_file_path) && !preg_match('/\/\?\//', $_SERVER['REQUEST_URI'])) {
-		  # split file path by slashes
+			# split file path by slashes
 			$split_path = explode('/', $current_page_file_path);
 			# if the request uri is pointing at a document, drop another folder from the file path
   		if(preg_match('/\./', $_SERVER['REQUEST_URI'])) array_pop($split_path);
@@ -120,4 +130,4 @@ Class Helpers {
 	
 }
 
-?>
+# end of file 
