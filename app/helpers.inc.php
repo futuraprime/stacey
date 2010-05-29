@@ -25,6 +25,31 @@ Class Helpers {
 		return $url ? $url : 'index';
 	}
 	
+	static function get_mime($file_path) {
+		$mtype = '';
+		if(function_exists('mime_content_type')) {
+			# mime_content_type is deprecated, but at the moment is the most reliable
+			$mtype = mime_content_type($file_path);
+		} else if (function_exists('finfo_file')) {
+			# if mime_content_type is gone, we'll try the PECL extension, which might not be installed
+			$finfo = finfo_open(FILEINFO_MIME);
+			$mtype = finfo_file($finfo, $file_path);
+			finfo_close($finfo);
+		} else {
+			# if PECL didn't work, we fall back on a shell script.
+			# This won't work on a Windows PHP server. There should be
+			# error handling here, but I'm not sure how to catch the error
+			# properly.
+			$file = escapeshellarg($file_path);
+			$mtype = shell_exec("file -bi ". $file);
+		}
+		if ($mtype == '') {
+			# oh dear, we've totally struck out. This is total panic.
+			$mtype = 'application/force-download';
+		}
+		return $mtype;
+	}
+	
 	static function url_to_file_path($url) {
 	  # if the url is empty, we're looking for the index page
 	  $url = empty($url) ? 'index': $url;

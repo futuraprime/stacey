@@ -94,7 +94,7 @@ Class Stacey {
 		if(!file_exists($file_path)) throw new Exception('404');
 		
 		if(preg_match('/\.\w+$/', $file_path)) { 					# throw new Exception('file');
-			header('Content-Type: ' . mime_content_type($file_path));
+			header('Content-Type: ' . Helpers::get_mime($file_path));
 			header('Content-Length: ' . filesize($file_path));
 			ob_clean();
 			flush();
