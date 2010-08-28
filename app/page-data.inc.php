@@ -217,7 +217,7 @@ Class PageData {
 				} else if (strpos($colon_split[1], "\n") === false) {
 					$page->$colon_split[0] = trim($colon_split[1]);
 				} else {
-					$page->$colon_split[0] = Markdown(trim($colon_split[1]));
+					$page->$colon_split[0] = SmartyPants(Markdown(trim($colon_split[1])));
 				}
 		}
 	}

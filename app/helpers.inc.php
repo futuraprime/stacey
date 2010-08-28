@@ -65,10 +65,10 @@ Class Helpers {
 				if(empty($matches)) {
 					preg_match('/([\w\-]+)_([\w]+)/', $u, $seg_u);
 					$file_path .= '/'.$seg_u[1].".".$seg_u[2];
-					#var_dump($file_path);
 					if(!file_exists($file_path)) return false;
+					# ignore the public directory
+					else if(preg_match('/public/', $file_path)) return false;
 					else {
-						# var_dump($file_path);
 						return $file_path;
 					}
 				}

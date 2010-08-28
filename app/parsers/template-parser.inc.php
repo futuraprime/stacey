@@ -77,6 +77,10 @@ Class TemplateParser {
 		  $template = self::parse_php($data, $template);
 		}
 		
+		if(preg_match('/{sp}([\S\s]*?){\/sp}/', $template)) {
+		  $template = self::parse_sp($data, $template);
+		}
+		
 		return $template;
 	}
 	
@@ -128,7 +132,6 @@ Class TemplateParser {
 		$template_parts = self::test_nested_matches($template_parts, 'foreach[\s]+?[\$\@].+?\s+?do\s+?', 'endforeach');
 		
 		if($pages) {
-			
 			# check if it's a template list
 			$spec_list = (strpos($template_parts[2], '-') === 1) ? true : false;
 			
@@ -201,7 +204,14 @@ Class TemplateParser {
 		# add the list
 		$items = (isset($data['$-'.$template_parts[2]]) && is_array($data['$-'.$template_parts[2]]) && !empty($data['$-'.$template_parts[2]])) ? $data['$-'.$template_parts[2]] : false;
 		
-		$template .= ($items) ? join($items, $template_parts[3]) : '';
+		# make a space the default separator
+		$spacer = (isset($template_parts[3]) && !is_null($template_parts[3])) ? $template_parts[3] : ' ';
+		if($items) {
+			for ($i = 0; $i < count($items); ++$i) {
+				$template .= $items[$i];
+				if($i < count($items) - 1) $template .= $template_parts[3];
+			}
+		}
 		
 		# finish it out
 		$template .= self::parse($data, $template_parts[4]);
@@ -240,6 +250,25 @@ Class TemplateParser {
 		}
 		
 		# run the replacementes on the post-"php" part of the partial
+		$template .= self::parse($data, $template_parts[3]);
+		
+		return $template;
+	}
+	
+	static function parse_sp(&$data, $template) {
+		# match any smartypants calls
+		preg_match('/^([\S\s]*?){sp}([\S\s]+?){\/sp}([\S\s]*?)$/', $template, $template_parts);
+		
+		# there is no earthly reason to nest sp tags, so we're not even bothering
+		# to check for it. Just don't do it. 'k? 'k.
+		
+		# run the replacements on the pre-sp part
+		$template = self::parse($data, $template_parts[1]);
+		
+		# pants it!
+		$template .= SmartyPants($template_parts[2]);
+		
+		#run the replacements on the post-sp part
 		$template .= self::parse($data, $template_parts[3]);
 		
 		return $template;
