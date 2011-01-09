@@ -2,209 +2,265 @@
 
 Class TemplateParser {
 
-  static $partials;
+	static $partials;
 
-  static function collate_partials($dir = './templates/partials') {
-    foreach(Helpers::file_cache($dir) as $file) {
-      if($file['is_folder']) {
-        self::collate_partials($file['path']);
-      } else {
-        self::$partials[] = $file['path'];
-      }
-    }
-  }
+	static function collate_partials($dir = './templates/partials') {
+		foreach(Helpers::file_cache($dir) as $file) {
+			if($file['is_folder']) {
+				self::collate_partials($file['path']);
+			} else {
+				self::$partials[] = $file['path'];
+			}
+		}
+	}
 
-  static function get_partial_template($name) {
-    # return contents of partial file, or return 'not found' error (as text)
-    if(!self::$partials) self::collate_partials();
+	static function get_partial_template($name) {
+		# return contents of partial file, or return 'not found' error (as text)
+		if(!self::$partials) self::collate_partials();
 
-    foreach(self::$partials as $partial) {
-      if(preg_match('/([^\/]+?)\.[\w]+?$/', $partial, $file_name)) {
-        if($file_name[1] == $name) return file_get_contents($partial);
-      }
-    }
-    return 'Partial \''.$name.'\' not found';
-  }
+		foreach(self::$partials as $partial) {
+			if(preg_match('/([^\/]+?)\.[\w]+?$/', $partial, $file_name)) {
+				if($file_name[1] == $name) return file_get_contents($partial);
+			}
+		}
+		return 'Partial \''.$name.'\' not found';
+	}
 
-  static function test_nested_matches($template_parts, $opening, $closing) {
-    # count opening tag matches within the opening and closing references
-    preg_match_all('/'.$opening.'/', $template_parts[count($template_parts) - 2], $opening_matches);
-    $closing_count = count($opening_matches[0]);
+	static function test_nested_matches($template_parts, $opening, $closing) {
+		# count opening tag matches within the opening and closing references
+		preg_match_all('/'.$opening.'/', $template_parts[count($template_parts) - 2], $opening_matches);
+		$closing_count = count($opening_matches[0]);
 
-    # if the inner-match contains unclosed opening references
-    if($closing_count > 0) {
-      # expand match to include a balanced number of closing references
-      $template_parts = self::expand_match($closing_count, $template_parts, $opening, $closing);
-    }
+		# if the inner-match contains unclosed opening references
+		if($closing_count > 0) {
+			# expand match to include a balanced number of closing references
+			$template_parts = self::expand_match($closing_count, $template_parts, $opening, $closing);
+		}
 
-    return $template_parts;
-  }
+		return $template_parts;
+	}
 
-  static function expand_match($closing_count, $template_parts, $opening, $closing) {
-      # rerun match to include the correct number of closing references,
-      # using a backreference repeated once for each additionally-required closing reference
-      preg_match('/('.$opening.'[\S\s]*?('.$closing.')([\S\s]+?\\2){'.$closing_count.','.$closing_count.'})([\S\s]*)/', $template_parts[0], $matches);
+	static function expand_match($closing_count, $template_parts, $opening, $closing) {
+			# rerun match to include the correct number of closing references,
+			# using a backreference repeated once for each additionally-required closing reference
+			preg_match('/('.$opening.'[\S\s]*?('.$closing.')([\S\s]+?\\2){'.$closing_count.','.$closing_count.'})([\S\s]*)/', $template_parts[0], $matches);
 
-      # strip out first opening and last closing references
-      $matches[1] = preg_replace(array('/^'.$opening.'\s+?/', '/\s+?'.$closing.'$/'), '', $matches[1]);
+			# strip out first opening and last closing references
+			$matches[1] = preg_replace(array('/^'.$opening.'\s+?/', '/\s+?'.$closing.'$/'), '', $matches[1]);
 
-      # overwrite the last two elements of the $matches array (the contents of the block & everything following the block)
-      $template_parts[count($template_parts) - 1] = $matches[4];
-      $template_parts[count($template_parts) - 2] = $matches[1];
+			# overwrite the last two elements of the $matches array (the contents of the block & everything following the block)
+			$template_parts[count($template_parts) - 1] = $matches[4];
+			$template_parts[count($template_parts) - 2] = $matches[1];
 
-      # return modified matches array
-      return $template_parts;
-  }
+			# return modified matches array
+			return $template_parts;
+	}
 
-  static function parse($data, $template) {
-    # parse template
-    if(preg_match('/get[\s]+?["\']\/?(.*?)\/?["\']\s+?do\s+?([\S\s]+?)end(?!\w)/', $template)) {
-      $template = self::parse_get($data, $template);
-    }
+	static function parse($data, $template) {
+		# parse template
+		if(preg_match('/get[\s]+?["\']\/?(.*?)\/?["\']\s+?do\s+?([\S\s]+?)end(?!\w)/', $template)) {
+			$template = self::parse_get($data, $template);
+		}
 
-    if(preg_match('/foreach[\s]+?([\$\@].+?)\s+?do\s+?([\S\s]+)endforeach/', $template)) {
-      $template = self::parse_foreach($data, $template);
-    }
+		if(preg_match('/foreach[\s]+?([\$\@].+?)\s+?do\s+?([\S\s]+)endforeach/', $template)) {
+			$template = self::parse_foreach($data, $template);
+		}
 
-    if(preg_match('/if\s*?(!)?\s*?([\$\@].+?)\s+?do\s+?([\S\s]+?)endif/', $template)) {
-      $template = self::parse_if($data, $template);
-    }
+		if(preg_match('/if\s*?(!)?\s*?([\$\@].+?)\s+?do\s+?([\S\s]+?)endif/', $template)) {
+			$template = self::parse_if($data, $template);
+		}
 
-    if(preg_match('/[\b\s>]:([\w\d_\-]+)\b/', $template)) {
-      $template = self::parse_includes($data, $template);
-    }
+		if(preg_match('/[\b\s>]:([\w\d_\-]+)\b/', $template)) {
+			$template = self::parse_includes($data, $template);
+		}
 
-    if(preg_match('/\@[\w\d_\-]+?/', $template)) {
-      $template = self::parse_vars($data, $template);
-    }
+		if(preg_match('/\$\-[\w\d_\-]+?/', $template)) {
+			$template = self::parse_lists($data, $template);
+		}
 
-    # we've finished parsing, so return any remaining @ symbols
-    $template = str_replace("\x01", '@', $template);
+		if(preg_match('/\@[\w\d_\-]+?/', $template)) {
+			$template = self::parse_vars($data, $template);
+		}
 
-    return $template;
-  }
+		if(preg_match('/{sp}([\S\s]*?){\/sp}/', $template)) {
+			$template = self::parse_sp($data, $template);
+		}
 
-  static function parse_get(&$data, $template) {
-    # match any gets
-    preg_match('/([\S\s]*?)get[\s]+?["\']\/?(.*?)\/?["\']\s+?do\s+?([\S\s]+?)end\b([\S\s]*)$/', $template, $template_parts);
+		# we've finished parsing, so return any remaining @ symbols
+		$template = str_replace("\x01", '@', $template);
 
-    # run the replacements on the pre-"get" part of the partial
-    $template = self::parse($data, $template_parts[1]);
+		return $template;
+	}
 
-    # turn route into file path
-    $file_path = Helpers::url_to_file_path($template_parts[2]);
+	static function parse_get(&$data, $template) {
+		# match any gets
+		preg_match('/([\S\s]*?)get[\s]+?["\']\/?(.*?)\/?["\']\s+?do\s+?([\S\s]+?)end\b([\S\s]*)$/', $template, $template_parts);
 
-    # store current data
-    $current_data = $data;
+		# run the replacements on the pre-"get" part of the partial
+		$template = self::parse($data, $template_parts[1]);
 
-    # if the route exists...
-    if(file_exists($file_path)) {
+		# turn route into file path
+		$file_path = Helpers::url_to_file_path($template_parts[2]);
 
-      # check for any nested matches
-      $template_parts = self::test_nested_matches($template_parts, 'get[\s]+?["\']\/?.*?\/?["\']\s+?do', 'end\b');
+		# store current data
+		$current_data = $data;
 
-      # set data object to match file path
-      $data = AssetFactory::get($file_path);
+		# if the route exists...
+		if(file_exists($file_path)) {
 
-      # run the replacements on the inner-"get" part of the partial
-      $template .= self::parse($data, $template_parts[3]);
-    }
+			# check for any nested matches
+			$template_parts = self::test_nested_matches($template_parts, 'get[\s]+?["\']\/?.*?\/?["\']\s+?do', 'end\b');
 
-    # revert context back to original
-    $data = $current_data;
+			# set data object to match file path
+			$data = AssetFactory::get($file_path);
 
-    # run the replacements on the post-"get" part of the partial
-    $template .= self::parse($data, $template_parts[4]);
+			# run the replacements on the inner-"get" part of the partial
+			$template .= self::parse($data, $template_parts[3]);
+		}
 
-    return $template;
-  }
+		# revert context back to original
+		$data = $current_data;
 
-  static function parse_foreach($data, $template) {
-    # split out the partial into the parts Before, Inside, and After the foreach loop
-    preg_match('/([\S\s]*?)foreach[\s]+?([\$\@].+?)\s+?do\s+?([\S\s]+?)endforeach([\S\s]*)$/', $template, $template_parts);
-    # run the replacements on the pre-"foreach" part of the partial
-    $template = self::parse($data, $template_parts[1]);
+		# run the replacements on the post-"get" part of the partial
+		$template .= self::parse($data, $template_parts[4]);
 
-    # traverse one level deeper into the data hierachy
-    $pages = (isset($data[$template_parts[2]]) && is_array($data[$template_parts[2]]) && !empty($data[$template_parts[2]])) ? $data[$template_parts[2]] : false;
+		return $template;
+	}
 
-    # check for any nested matches
-    $template_parts = self::test_nested_matches($template_parts, 'foreach[\s]+?[\$\@].+?\s+?do\s+?', 'endforeach');
+	static function parse_foreach($data, $template) {
+		# split out the partial into the parts Before, Inside, and After the foreach loop
+		preg_match('/([\S\s]*?)foreach[\s]+?([\$\@].+?)\s+?do\s+?([\S\s]+?)endforeach([\S\s]*)$/', $template, $template_parts);
+		# run the replacements on the pre-"foreach" part of the partial
+		$template = self::parse($data, $template_parts[1]);
 
-    if($pages) {
+		# traverse one level deeper into the data hierachy
+		$pages = (isset($data[$template_parts[2]]) && is_array($data[$template_parts[2]]) && !empty($data[$template_parts[2]])) ? $data[$template_parts[2]] : false;
 
-      foreach($pages as $data_item) {
-        # transform data_item into its appropriate Object
-        $data_object =& AssetFactory::get($data_item);
-        # recursively parse the inside part of the foreach loop
-        $template .= self::parse($data_object, $template_parts[3]);
-      }
-    }
+		# check for any nested matches
+		$template_parts = self::test_nested_matches($template_parts, 'foreach[\s]+?[\$\@].+?\s+?do\s+?', 'endforeach');
 
-    # run the replacements on the post-"foreach" part of the partial
-    $template .= self::parse($data, $template_parts[4]);
-    return $template;
-  }
+		if($pages) {
+	
+			# check if it's a template list
+			$spec_list = (strpos($template_parts[2], '-') === 1) ? true : false;
+			
+			foreach($pages as $data_item) {
+				# transform data_item into its appropriate Object
+				# note - $data_object used to be assigned via =&. Standard assignment does not appear to break anything.
+				$data_object = ($spec_list) ? array('@value' => $data_item) : AssetFactory::get($data_item);
+				# recursively parse the inside part of the foreach loop
+				$template .= self::parse($data_object, $template_parts[3]);
+			}
+		}
 
-  static function parse_if($data, $template) {
-    # match any inner if statements
-    preg_match('/([\S\s]*?)if\s*?(!)?\s*?([\$\@].+?)\s+?do\s+?([\S\s]+?)endif([\S\s]*)$/', $template, $template_parts);
-    # run the replacements on the pre-"if" part of the partial
-    $template = self::parse($data, $template_parts[1]);
+		# run the replacements on the post-"foreach" part of the partial
+		$template .= self::parse($data, $template_parts[4]);
+		return $template;
+	}
 
-    # check for any nested matches
-    $template_parts = self::test_nested_matches($template_parts, 'if\s*?!?\s*?[\$\@].+?\s+?do\s+?', 'endif');
+	static function parse_if($data, $template) {
+		# match any inner if statements
+		preg_match('/([\S\s]*?)if\s*?(!)?\s*?([\$\@].+?)\s+?do\s+?([\S\s]+?)endif([\S\s]*)$/', $template, $template_parts);
+		# run the replacements on the pre-"if" part of the partial
+		$template = self::parse($data, $template_parts[1]);
 
-    # if statment expects a false result
-    if($template_parts[2]) {
-      if(!isset($data[$template_parts[3]]) || (empty($data[$template_parts[3]]) || !$data[$template_parts[3]])) {
-        # parse the block inside the if statement
-        $template .= self::parse($data, $template_parts[4]);
-      }
-    }
-    # if statment expects a true result
-    else {
-      if(isset($data[$template_parts[3]]) && !empty($data[$template_parts[3]]) && ($data[$template_parts[3]])) {
-        # parse the block inside the if statement
-        $template .= self::parse($data, $template_parts[4]);
-      }
-    }
+		# check for any nested matches
+		$template_parts = self::test_nested_matches($template_parts, 'if\s*?!?\s*?[\$\@].+?\s+?do\s+?', 'endif');
 
-    # run the replacements on the post-"if" part of the partial
-    $template .= self::parse($data, $template_parts[5]);
+		# if statment expects a false result
+		if($template_parts[2]) {
+			if(!isset($data[$template_parts[3]]) || (empty($data[$template_parts[3]]) || !$data[$template_parts[3]])) {
+				# parse the block inside the if statement
+				$template .= self::parse($data, $template_parts[4]);
+			}
+		}
+		# if statment expects a true result
+		else {
+			if(isset($data[$template_parts[3]]) && !empty($data[$template_parts[3]]) && ($data[$template_parts[3]])) {
+				# parse the block inside the if statement
+				$template .= self::parse($data, $template_parts[4]);
+			}
+		}
 
-    return $template;
-  }
+		# run the replacements on the post-"if" part of the partial
+		$template .= self::parse($data, $template_parts[5]);
 
-  static function parse_includes($data, $template) {
-    # split out the partial into the parts Before, Inside, and After the :include
-    preg_match('/([\S\s]*?)(?<![a-z0-9]):([\w\d_\-]+)\b([\S\s]*)$/', $template, $template_parts);
-    # run the replacements on the pre-":include" part of the partial
-    $template = self::parse($data, $template_parts[1]);
+		return $template;
+	}
 
-    # parse the included template
-    $inner_template = self::get_partial_template($template_parts[2]);
-    $template .= self::parse($data, $inner_template);
+	static function parse_includes($data, $template) {
+		# split out the partial into the parts Before, Inside, and After the :include
+		preg_match('/([\S\s]*?)(?<![a-z0-9]):([\w\d_\-]+)\b([\S\s]*)$/', $template, $template_parts);
+		# run the replacements on the pre-":include" part of the partial
+		$template = self::parse($data, $template_parts[1]);
 
-    # run the replacements on the post-":include" part of the partial
-    $template .= self::parse($data, $template_parts[3]);
+		# parse the included template
+		$inner_template = self::get_partial_template($template_parts[2]);
+		$template .= self::parse($data, $inner_template);
 
-    return $template;
-  }
+		# run the replacements on the post-":include" part of the partial
+		$template .= self::parse($data, $template_parts[3]);
 
-  static function parse_vars($data, $template) {
+		return $template;
+	}
 
-    # split out the partial into the parts Before, Inside, and After the @var
-    foreach($data as $key => $value) {
-      $var = ($key == '@root_path') ? $key.'\/?' : $key;
-      if(is_string($value) && strlen($var) > 1) $template = preg_replace('/'.$var.'/', $value, $template);
-    }
+	static function parse_lists($data, $template) {
+		# split out the template
+		preg_match('/([\S\s]*?)\$\-([\w\d_\-]+)\(([\w ,\.\-\+]+)\)([\S\s]*)$/', $template, $template_parts);
+		
+		$template = self::parse($data, $template_parts[1]);
+		
+		# add the list
+		$items = (isset($data['$-'.$template_parts[2]]) && is_array($data['$-'.$template_parts[2]]) && !empty($data['$-'.$template_parts[2]])) ? $data['$-'.$template_parts[2]] : false;
+		
+		# make a space the default separator
+		$spacer = (isset($template_parts[3]) && !is_null($template_parts[3])) ? $template_parts[3] : ' ';
+		if($items) {
+			for ($i = 0; $i < count($items); ++$i) {
+				$template .= $items[$i];
+				if($i < count($items) - 1) $template .= $template_parts[3];
+			}
+		}
+		
+		# finish it out
+		$template .= self::parse($data, $template_parts[4]);
+		
+		return $template;
+	}
 
-    # temporarily replace any remaining @ symbols to prevent variables being replaced in an incorrect scope
-    $template = str_replace('@', "\x01", $template);
+	static function parse_vars($data, $template) {
 
-    return $template;
-  }
+		# split out the partial into the parts Before, Inside, and After the @var
+		foreach($data as $key => $value) {
+			$var = ($key == '@root_path') ? $key.'\/?' : $key;
+			if(is_string($value) && strlen($var) > 1) $template = preg_replace('/'.$var.'/', $value, $template);
+		}
+
+		# temporarily replace any remaining @ symbols to prevent variables being replaced in an incorrect scope
+		$template = str_replace('@', "\x01", $template);
+
+		return $template;
+	}
+
+	static function parse_sp(&$data, $template) {
+		# match any smartypants calls
+		preg_match('/^([\S\s]*?){sp}([\S\s]+?){\/sp}([\S\s]*?)$/', $template, $template_parts);
+		
+		# there is no earthly reason to nest sp tags, so we're not even bothering
+		# to check for it. Just don't do it. 'k? 'k.
+		
+		# run the replacements on the pre-sp part
+		$template = self::parse($data, $template_parts[1]);
+		
+		# pants it!
+		$template .= SmartyPants($template_parts[2]);
+		
+		#run the replacements on the post-sp part
+		$template .= self::parse($data, $template_parts[3]);
+		
+		return $template;
+	}
+
 
 }
 
